@@ -4,7 +4,6 @@
 	<meta charset="UTF-8">
 	<title>Item</title>
 	<script src="/js/libs/vue.js"></script>
-	<script src="/js/libs/vuex.js"></script>
 	<link rel="stylesheet" href="/styles/styles.css">
 </head>
 <body>

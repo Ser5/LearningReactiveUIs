@@ -1,3 +1,0 @@
-<?
-class Amount extends Base {
-}

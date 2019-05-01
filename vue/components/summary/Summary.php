@@ -1,3 +1,0 @@
-<?
-class Summary extends Base {
-}
