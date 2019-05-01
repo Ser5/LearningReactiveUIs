@@ -1,0 +1,3 @@
+<?
+class GSelect extends Base {
+}
