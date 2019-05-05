@@ -1,34 +1,38 @@
 <?
 $data = [
 	'basket' => [
-		'1:1:1:7' => ['item'=>'Кресло Басурман',  'material'=>'Кожа',  'color'=>'Вася',    'backColor'=>'Белый',  'count'=>5],
-		'1:1:1:8' => ['item'=>'Кресло Басурман',  'material'=>'Кожа',  'color'=>'Вася',    'backColor'=>'Чёрный', 'count'=>6],
-		'1:2:4:7' => ['item'=>'Кресло Басурман',  'material'=>'Ткань', 'color'=>'Красный', 'backColor'=>'Белый',  'count'=>7],
-		'2:1:1:7' => ['item'=>'Кресло Чингачкук', 'material'=>'Кожа',  'color'=>'Вася',    'backColor'=>'Белый',  'count'=>8],
+		'items' => [
+			'1:1:1:7' => ['item'=>'Кресло Басурман',  'material'=>'Кожа',  'color'=>'Вася',    'backColor'=>'Белый',  'count'=>5],
+			'1:1:1:8' => ['item'=>'Кресло Басурман',  'material'=>'Кожа',  'color'=>'Вася',    'backColor'=>'Чёрный', 'count'=>6],
+			'1:2:4:7' => ['item'=>'Кресло Басурман',  'material'=>'Ткань', 'color'=>'Красный', 'backColor'=>'Белый',  'count'=>7],
+			'2:1:1:7' => ['item'=>'Кресло Чингачкук', 'material'=>'Кожа',  'color'=>'Вася',    'backColor'=>'Белый',  'count'=>8],
+		],
 	],
-	'itemsList' => [
-		1 => [
-			'id'   => 1,
-			'name' => 'Кресло Басурман',
-			'prices' => [
-				'1' => 1000,
-				'2' => 700,
+	'items' => [
+		'list' => [
+			1 => [
+				'id'   => 1,
+				'name' => 'Кресло Басурман',
+				'prices' => [
+					'1' => 1000,
+					'2' => 700,
+				],
 			],
-		],
-		2 => [
-			'id'   => 2,
-			'name' => 'Кресло Чингачкук',
-			'prices' => [
-				'1' => 800,
-				'2' => 600,
+			2 => [
+				'id'   => 2,
+				'name' => 'Кресло Чингачкук',
+				'prices' => [
+					'1' => 800,
+					'2' => 600,
+				],
 			],
-		],
-		3 => [
-			'id'   => 3,
-			'name' => 'Кресло Блатной',
-			'prices' => [
-				'1' => 1200,
-				'2' => 800,
+			3 => [
+				'id'   => 3,
+				'name' => 'Кресло Блатной',
+				'prices' => [
+					'1' => 1200,
+					'2' => 800,
+				],
 			],
 		],
 	],
@@ -115,7 +119,7 @@ unset($material);
 
 //Всем инпутам делаем уникальные названия, учитывающие товар, в котором они находятся.
 //Чтобы на одной странице могло выводиться несколько товаров, и названия полей не пересекались.
-foreach ($data['itemsList'] as &$item) {
+foreach ($data['items']['list'] as &$item) {
 	$item += $itemBase;
 	$item['materials']['inputName'] = "item{$item['id']}_{$item['materials']['inputName']}";
 	foreach ($item['materials']['options'] as &$material) {
@@ -127,5 +131,5 @@ foreach ($data['itemsList'] as &$item) {
 unset($item);
 
 //Это товар, отображаемый на детальной странице
-$data['item'] = $data['itemsList'][1];
-unset($data['itemsList'][1]);
+$data['item'] = $data['items']['list'][1];
+unset($data['items']['list'][1]);

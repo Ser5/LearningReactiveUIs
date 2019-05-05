@@ -10,12 +10,42 @@
 
 <script>
 let state = <?=json_encode($data)?>;
+state.events = new Vue();
 
-let itemsToProcess = {[state.item.id]:state.item, ...state.itemsList};
+
+
+//Присовываем свойства и методы корзине
+Object.assign(state.basket, {
+	isInBasket (key) {
+		return !!this.items[key];
+	},
+	add (key, data) {
+		if (!this.isInBasket(key)) {
+			Vue.set(this.items, key, data);
+		}
+	},
+	remove (key) {
+		Vue.delete(this.items, key)
+	},
+	getCount (key) {
+		return this.isInBasket(key) ? this.items[key].count : 0;
+	},
+	setCount (key, count) {
+		if (this.isInBasket(key)) {
+			this.items[key].count = count;
+		}
+	},
+});
+
+
+
+//Присовываем свойства и методы товарам
+let itemsToProcess = {[state.item.id]:state.item, ...state.items.list};
 
 for (let itemId in itemsToProcess) {
-	let item = itemsToProcess[itemId];
+	let item        = itemsToProcess[itemId];
 	item.itemEvents = new Vue();
+	item.basket     = state.basket;
 	Object.defineProperty(item, 'activeMaterial',  {get: function () { return this.materials.options[this.materials.value] }});
 	Object.defineProperty(item, 'activeColor',     {get: function () { return this.activeMaterial.colors.options[this.activeMaterial.colors.value] }});
 	Object.defineProperty(item, 'activeBackColor', {get: function () { return this.backColors.options[this.backColors.value] }});
@@ -38,14 +68,57 @@ for (let itemId in itemsToProcess) {
 	);
 	Object.defineProperty(item, 'isInBasket', {
 		get: function () {
-			return !!state.basket[this.basketKey];
+			return this.basket.isInBasket(this.basketKey);
 		}},
 	);
+	Object.assign(item, {
+		_countFromBasketToLocal () {
+			this.count.value = this.basket.getCount(this.basketKey) || 1;
+		},
+		_countFromLocalToBasket () {
+			this.basket.setCount(this.basketKey, this.count.value);
+		},
+		buy () {
+			if (!this.isInBasket) {
+				let basketData = {
+					item:      this.name,
+					material:  this.activeMaterial.label,
+					color:     this.activeColor.label,
+					backColor: this.activeBackColor.label,
+					count:     this.count.value,
+				};
+				this.basket.add(this.basketKey, basketData);
+			}
+		},
+	});
+	item._countFromBasketToLocal();
+	item.itemEvents.$on('select_change', () => item._countFromBasketToLocal() );
+	item.itemEvents.$on('amount_change', () => item._countFromLocalToBasket() );
 }
 
-Object.defineProperty(state.itemPopup, 'item', {get: function () { return state.itemsList[this.itemId] }});
 
-state.events = new Vue();
+
+//Присовываем списку товаров
+Object.assign(state.items, {
+	popupItem (id) {
+		state.itemPopup.itemId = id;
+		state.events.$emit('item_popup');
+	},
+});
+
+
+
+//Присовываем попапу
+Object.defineProperty(state.itemPopup, 'item', {get: function () { return state.items.list[this.itemId] }});
+Object.assign(state.itemPopup, {
+	show () {
+		this.isShow = true;
+	},
+	hide () {
+		this.isShow = false;
+	},
+});
+state.events.$on('item_popup', () => state.itemPopup.show());
 </script>
 
 <div id="app">
@@ -53,7 +126,7 @@ state.events = new Vue();
 	<c-item v-bind:data="state.item"></c-item>
 
 	<br><br>
-	<c-items v-bind:list="state.itemsList"></c-items>
+	<c-items v-bind:data="state.items"></c-items>
 
 	<c-popup></c-popup>
 </div>

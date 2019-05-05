@@ -1,16 +1,11 @@
 Vue.component('c-basket', {
 	data () {return {
-		state:state,
+		data: state.basket,
 	}},
-	methods: {
-		remove (key) {
-			Vue.delete(state.basket, key);
-		},
-	},
 	template: `
 <div class="basket">
-	<div class="basket__item" v-for="(e,key) in state.basket">
-		<div class="basket__delete" @click="remove(key)">&times;</div>
+	<div class="basket__item" v-for="(e,key) in data.items">
+		<div class="basket__delete" @click="data.remove(key)">&times;</div>
 		<div class="basket__name">{{ e.item }}, {{ e.material }}, {{ e.color }}, {{ e.backColor }}:</div>
 		<div class="basket__count">{{ e.count }}</div>
 	</div>
@@ -133,38 +128,6 @@ Vue.component('c-item', {
 	props: {
 		data: Object,
 	},
-	data () {
-		return {};
-	},
-	mounted () {
-		let self = this;
-		this._countFromBasketToLocal();
-		this.data.itemEvents.$on('select_change', this._countFromBasketToLocal);
-		this.data.itemEvents.$on('amount_change', this._countFromLocalToBasket);
-	},
-	methods: {
-		_countFromBasketToLocal () {
-			this.data.count.value = this.data.isInBasket ? state.basket[this.data.basketKey].count : 1;
-		},
-		_countFromLocalToBasket () {
-			if (this.data.isInBasket) {
-				state.basket[this.data.basketKey].count = this.data.count.value;
-			}
-		},
-		buy () {
-			if (this.data.isInBasket) {
-				return;
-			}
-			let basketData = {
-				item:      this.data.name,
-				material:  this.data.activeMaterial.label,
-				color:     this.data.activeColor.label,
-				backColor: this.data.activeBackColor.label,
-				count:     this.data.count.value,
-			};
-			Vue.set(state.basket, this.data.basketKey, basketData);
-		},
-	},
 	template: `
 <div class="item-detail">
 	<div class="item-detail__section">
@@ -195,7 +158,7 @@ Vue.component('c-item', {
 					</div>
 					<div class="item-detail__count-buy">
 						<c-amount v-bind:data="data.count" v-bind:itemEvents="data.itemEvents"></c-amount>
-						<div :class="{button:true, button_buy:true, button_bought:data.isInBasket}" @click="buy()">{{ !data.isInBasket ? 'В корзину' : 'В корзине'}}</div>
+						<div :class="{button:true, button_buy:true, button_bought:data.isInBasket}" @click="data.buy()">{{ !data.isInBasket ? 'В корзину' : 'В корзине'}}</div>
 					</div>
 				</div>
 			</div>
@@ -209,19 +172,13 @@ Vue.component('c-item', {
 
 Vue.component('c-items', {
 	props: {
-		list: Object,
-	},
-	methods: {
-		popupItem (id) {
-			state.itemPopup.itemId = id;
-			state.events.$emit('item_popup');
-		},
+		data: Object,
 	},
 	template: `
 <div>
 	<div class="items-list-name">Другие товары</div>
 	<div class="items-list">
-		<div class="items-list__item" v-for="item in list" @click="popupItem(item.id)">
+		<div class="items-list__item" v-for="item in data.list" @click="data.popupItem(item.id)">
 			<div class="items-list__item-section items-list__item-image" v-html="item.image"></div>
 			<div class="items-list__item-section items-list__item-name">{{ item.name }}</div>
 			<div class="items-list__item-section items-list__item-price">
@@ -239,26 +196,12 @@ Vue.component('c-items', {
 
 
 Vue.component('c-popup', {
-	props: {},
-	data () {
-		return {
-			data: state.itemPopup,
-		};
-	},
-	mounted () {
-		state.events.$on('item_popup', this.show);
-	},
-	methods: {
-		show () {
-			this.data.isShow = true;
-		},
-		hide () {
-			this.data.isShow = false;
-		},
-	},
+	data () {return {
+		data: state.itemPopup,
+	}},
 	template: `
 <div class="popup" v-if="data.isShow">
-	<div class="popup__bg" @click="hide()">
+	<div class="popup__bg" @click="data.hide()">
 		<div class="popup__window" @click.stop>
 			<div class="popup__content">
 				<c-item v-bind:data="data.item"></c-item>
