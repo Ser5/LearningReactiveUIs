@@ -1,9 +1,7 @@
 Vue.component('c-basket', {
-	data () {
-		return {
-			state:state,
-		};
-	},
+	data () {return {
+		state:state,
+	}},
 	methods: {
 		remove (key) {
 			Vue.delete(state.basket, key);

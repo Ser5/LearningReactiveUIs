@@ -129,7 +129,3 @@ unset($item);
 //Это товар, отображаемый на детальной странице
 $data['item'] = $data['itemsList'][1];
 unset($data['itemsList'][1]);
-
-
-
-require __DIR__.'/template.php';

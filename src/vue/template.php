@@ -11,7 +11,7 @@
 <script>
 let state = <?=json_encode($data)?>;
 
-let itemsToProcess = {...{[state.item.id]:state.item}, ...state.itemsList};
+let itemsToProcess = {[state.item.id]:state.item, ...state.itemsList};
 
 for (let itemId in itemsToProcess) {
 	let item = itemsToProcess[itemId];
