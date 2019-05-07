@@ -1,3 +1,206 @@
+class Basket {
+	constructor ({basket}) {
+		Object.assign(this, basket);
+	}
+	isInBasket (key) {
+		return !!this.items[key];
+	}
+	add (key, data) {
+		if (!this.isInBasket(key)) {
+			Vue.set(this.items, key, data);
+		}
+	}
+	remove (key) {
+		Vue.delete(this.items, key)
+	}
+	getCount (key) {
+		return this.isInBasket(key) ? this.items[key].count : 0;
+	}
+	setCount (key, count) {
+		if (this.isInBasket(key)) {
+			this.items[key].count = count;
+		}
+	}
+}
+
+
+
+class Select {
+	constructor ({select, itemEvents}) {
+		Object.assign(this, select);
+		this.itemEvents = itemEvents;
+	}
+
+	get activeOption () { return this.options[this.value] }
+
+	isActiveOption (option) {
+		return option.value == this.activeOption.value;
+	}
+	setValue (value) {
+		this.value = value;
+		this.itemEvents.$emit('select_change');
+	}
+}
+
+
+
+class Materials extends Select {
+	constructor ({select, itemEvents}) {
+		super({select, itemEvents});
+		for (let a in this.options) {
+			this.options[a].colors = new Colors({select: this.options[a].colors, itemEvents});
+		}
+	}
+}
+
+
+
+class Colors extends Select {
+}
+
+
+
+class Count {
+	constructor ({count, itemEvents}) {
+		Object.assign(this, count);
+		this.itemEvents = itemEvents;
+	}
+	decrementCount () {
+		if (this.value > 1) {
+			this.value--;
+		}
+		this.itemEvents.$emit('count_change');
+	}
+	incrementCount () {
+		if (this.value < 10) {
+			this.value++;
+		}
+		this.itemEvents.$emit('count_change');
+	}
+}
+
+
+
+class Item {
+	constructor ({item, basket}) {
+		Object.assign(this, item);
+		this.itemEvents = new Vue();
+		this.basket     = basket;
+		this.materials  = new Materials({select: this.materials,  itemEvents: this.itemEvents});
+		this.backColors = new Colors(   {select: this.backColors, itemEvents: this.itemEvents});
+		this.count      = new Count(    {count:  this.count,      itemEvents: this.itemEvents});
+		this._countFromBasketToLocal();
+		this.itemEvents.$on('select_change', () => this._countFromBasketToLocal() );
+		this.itemEvents.$on('count_change',  () => this._countFromLocalToBasket() );
+	}
+
+	get activeMaterial     () { return this.materials.options[this.materials.value] }
+	get activeColor        () { return this.activeMaterial.colors.options[this.activeMaterial.colors.value] }
+	get activeBackColor    () { return this.backColors.options[this.backColors.value] }
+	get summaryEntriesList () {
+		return [
+			{term: this.materials.label,  def: this.activeMaterial.label},
+			{term: this.colors.label,     def: this.activeColor.label},
+			{term: this.backColors.label, def: this.activeBackColor.label},
+		];
+	};
+	get price      () { return this.prices[this.activeMaterial.value] }
+	get totalPrice () { return this.price * this.count.value }
+	get mainPrice  () { return Object.values(this.prices)[0] }
+	get basketKey  () { return `${this.id}:${this.activeMaterial.value}:${this.activeColor.value}:${this.activeBackColor.value}` }
+	get isInBasket () { return this.basket.isInBasket(this.basketKey) }
+
+	_countFromBasketToLocal () {
+		this.count.value = this.basket.getCount(this.basketKey) || 1;
+	}
+	_countFromLocalToBasket () {
+		this.basket.setCount(this.basketKey, this.count.value);
+	}
+	buy () {
+		if (!this.isInBasket) {
+			let basketData = {
+				item:      this.name,
+				material:  this.activeMaterial.label,
+				color:     this.activeColor.label,
+				backColor: this.activeBackColor.label,
+				count:     this.count.value,
+			};
+			this.basket.add(this.basketKey, basketData);
+		}
+	}
+}
+
+
+
+class Items {
+	constructor ({items, basket, itemPopup, pageEvents}) {
+		Object.assign(this, items);
+		this.itemPopup  = itemPopup;
+		this.pageEvents = pageEvents;
+		for (let itemId in this.list) {
+			this.list[itemId] = new Item({item: this.list[itemId], basket});
+		}
+	}
+	popupItem (id) {
+		this.itemPopup.itemId = id;
+		this.pageEvents.$emit('item_popup');
+	}
+}
+
+
+
+class ItemPopup {
+	constructor ({itemPopup, itemsList, pageEvents}) {
+		Object.assign(this, itemPopup);
+		this.itemsList  = itemsList;
+		this.pageEvents = pageEvents;
+		this.pageEvents.$on('item_popup', () => this.show());
+	}
+	get item () {
+		return this.itemsList[this.itemId];
+	}
+	show () {
+		this.isShow = true;
+	}
+	hide () {
+		this.isShow = false;
+	}
+}
+
+
+
+class State {
+	constructor ({state}) {
+		Object.assign(this, state);
+		let itemsList   = this.items.list;
+		this.pageEvents = new Vue();
+		this.basket = new Basket({
+			basket: this.basket,
+		});
+		this.item = new Item({
+			item:   this.item,
+			basket: this.basket,
+		});
+		this.itemPopup  = new ItemPopup({
+			itemPopup:  this.itemPopup,
+			pageEvents: this.pageEvents,
+			itemsList,
+		});
+		this.items = new Items({
+			items:      this.items,
+			basket:     this.basket,
+			itemPopup:  this.itemPopup,
+			pageEvents: this.pageEvents,
+		});
+	}
+}
+
+
+
+state = new State({state});
+
+
+
 Vue.component('c-basket', {
 	data () {return {
 		data: state.basket,
@@ -15,41 +218,22 @@ Vue.component('c-basket', {
 
 
 
-let cSelectBase = {
-	props: {
-		data:       Object,
-		itemEvents: Object,
-	},
-	computed: {
-		activeOption () { return this.data.options[this.data.value]; },
-	},
-	methods: {
-		isActiveOption (option) { return option.value == this.activeOption.value; },
-		setValue (value) {
-			this.data.value = value;
-			this.itemEvents.$emit('select_change');
-		},
-	},
-};
-
-
-
 Vue.component('c-select-buttons', {
-	mixins: [cSelectBase],
+	props: {data: Object},
 	template: `
 <div class="tabs">
 	<div class="item-detail__section">
 		<div class="buttons-list">
 			<label v-for="material in data.options">
-				<input class="hidden" type="radio" :name="data.inputName" :value="material.value" :checked="isActiveOption(material)" @click="setValue(material.value)">
+				<input class="hidden" type="radio" :name="data.inputName" :value="material.value" :checked="data.isActiveOption(material)" @click="data.setValue(material.value)">
 				<div class="button button_switch buttons-list__item">{{ material.label }}</div>
 			</label>
 		</div>
 	</div>
 	<div class="tabs__panels">
-		<div v-for="material in data.options" v-bind:key="material.value" :class="{'tabs__panel':true, 'tabs__panel_active':isActiveOption(material)}">
+		<div v-for="material in data.options" :key="material.value" :class="{'tabs__panel':true, 'tabs__panel_active':data.isActiveOption(material)}">
 			<div class="item-detail__section-title">{{ material.colors.label }}:</div>
-			<c-select-colors v-bind:data="material.colors" v-bind:itemEvents="itemEvents"></c-select-colors>
+			<c-select-colors :data="material.colors"></c-select-colors>
 		</div>
 	</div>
 </div>
@@ -59,15 +243,15 @@ Vue.component('c-select-buttons', {
 
 
 Vue.component('c-select-colors', {
-	mixins: [cSelectBase],
+	props: {data: Object},
 	template: `
 <div class="colors">
 	<div class="colors__selected">
-		Выбран: <span class="colors__selected-text">{{ activeOption.label }}</span>
+		Выбран: <span class="colors__selected-text">{{ data.activeOption.label }}</span>
 	</div>
 	<div class="colors__list">
 		<label class="colors__label" v-for="color in data.options">
-			<input class="colors__input" type="radio" :name="data.inputName" :value="color.value" :checked="color.value == activeOption.value" @click="setValue(color.value)">
+			<input class="colors__input" type="radio" :name="data.inputName" :value="color.value" :checked="data.isActiveOption(color)" @click="data.setValue(color.value)">
 			<div class="colors__item">
 				<div class="colors__image colors__image" :style="{background:color.color}"></div>
 			</div>
@@ -80,9 +264,7 @@ Vue.component('c-select-colors', {
 
 
 Vue.component('c-summary', {
-	props: {
-		data: Array,
-	},
+	props: {data: Array},
 	template: `
 <table class="summary">
 	<tr v-for="e of data">
@@ -94,30 +276,13 @@ Vue.component('c-summary', {
 
 
 
-Vue.component('c-amount', {
-	props: {
-		data:       Object,
-		itemEvents: Object,
-	},
-	methods: {
-		decrementCount () {
-			if (this.data.value > 1) {
-				this.data.value--;
-			}
-			this.itemEvents.$emit('amount_change');
-		},
-		incrementCount () {
-			if (this.data.value < 10) {
-				this.data.value++;
-			}
-			this.itemEvents.$emit('amount_change');
-		},
-	},
+Vue.component('c-count', {
+	props: {data: Object},
 	template: `
-<div class="amount">
-	<div class="amount__button amount__button_m" @click="decrementCount()">&minus;</div>
-	<input class="amount__input js-amount__input" type="text" :name="data.inputName" :value="data.value" readonly>
-	<div class="amount__button amount__button_p" @click="incrementCount()">+</div>
+<div class="count">
+	<div class="count__button count__button_m" @click="data.decrementCount()">&minus;</div>
+	<input class="count__input js-count__input" type="text" :name="data.inputName" :value="data.value" readonly>
+	<div class="count__button count__button_p" @click="data.incrementCount()">+</div>
 </div>
 `
 });
@@ -125,9 +290,7 @@ Vue.component('c-amount', {
 
 
 Vue.component('c-item', {
-	props: {
-		data: Object,
-	},
+	props: {data: Object},
 	template: `
 <div class="item-detail">
 	<div class="item-detail__section">
@@ -138,16 +301,16 @@ Vue.component('c-item', {
 		<div class="item-detail__data">
 			<div class="item-detail__section">
 				<div class="item-detail__section-title">{{ data.materials.label }}:</div>
-				<c-select-buttons v-bind:data="data.materials" v-bind:itemEvents="data.itemEvents"></c-select-buttons>
+				<c-select-buttons :data="data.materials"></c-select-buttons>
 			</div>
 			<div class="item-detail__section">
 				<div class="item-detail__section-title">{{ data.backColors.label }}:</div>
-				<c-select-colors v-bind:data="data.backColors" v-bind:itemEvents="data.itemEvents"></c-select-colors>
+				<c-select-colors :data="data.backColors"></c-select-colors>
 			</div>
 			<div class="item-detail__buy-block">
 				<div>
 					<div class="item-detail__section-title">Выбрано:</div>
-					<c-summary v-bind:data="data.summaryEntriesList"></c-summary>
+					<c-summary :data="data.summaryEntriesList"></c-summary>
 				</div>
 				<div>
 					<div class="item-detail__section">
@@ -157,7 +320,7 @@ Vue.component('c-item', {
 						</div>
 					</div>
 					<div class="item-detail__count-buy">
-						<c-amount v-bind:data="data.count" v-bind:itemEvents="data.itemEvents"></c-amount>
+						<c-count :data="data.count"></c-count>
 						<div :class="{button:true, button_buy:true, button_bought:data.isInBasket}" @click="data.buy()">{{ !data.isInBasket ? 'В корзину' : 'В корзине'}}</div>
 					</div>
 				</div>
@@ -171,9 +334,7 @@ Vue.component('c-item', {
 
 
 Vue.component('c-items', {
-	props: {
-		data: Object,
-	},
+	props: {data: Object},
 	template: `
 <div>
 	<div class="items-list-name">Другие товары</div>
@@ -204,7 +365,7 @@ Vue.component('c-popup', {
 	<div class="popup__bg" @click="data.hide()">
 		<div class="popup__window" @click.stop>
 			<div class="popup__content">
-				<c-item v-bind:data="data.item"></c-item>
+				<c-item :data="data.item"></c-item>
 			</div>
 		</div>
 	</div>

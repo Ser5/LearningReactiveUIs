@@ -40,7 +40,6 @@ $data = [
 	'itemPopup' => [
 		'isShow' => false,
 		'itemId' => false,
-		'item'   => null,
 	],
 ];
 
